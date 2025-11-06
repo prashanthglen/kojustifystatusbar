@@ -4,9 +4,10 @@ This is my attempt to distribute all the items in the KOReader status bar to be 
 
 ## Patch
 To illustrate the end look that I want to achieve, I have a patch here where the user can define what items they want to see on the status bar. Things I still want to add on to the patch:
-[] Progress bar.
-[] Select items to display from the settings (for footer only).
-[] Implement more than 3 dynamic spaces.
+
+- [ ] Progress bar.
+- [ ] Select items to display from the settings (for footer only).
+- [ ] Implement more than 3 dynamic spaces.
 
 ## Usage
 1. Download the ![file](./2-justified-footer.lua).
