@@ -5,7 +5,8 @@
         does not conflict with our changes
     - [x] rewrite the genAllFooterText so that we can generate the
         text first and then replace all the separators with custom spacing.
-    - [ ] add mennu entries to toggle this feature.
+    - [x] add menu entries to toggle this feature.
+    |   Status bar > Configure items > Alignment > Justify
     - [ ] allow for grouping of entries.
     
 --]]
@@ -14,12 +15,18 @@ local BD = require("ui/bidi")
 local TextWidget = require("ui/widget/textwidget")
 local ReaderFooter = require("apps/reader/modules/readerfooter")
 local logger = require("logger")
+local _ = require("gettext")
 
 local _ReaderFooter_init_orig = ReaderFooter.init
 local _ReaderFooter_genAllFooterText_orig = ReaderFooter.genAllFooterText
+local _ReadeFooter_dynamicFiller_orig = ReaderFooter.textGeneratorMap.dynamic_filler
 
 local new_filler_func = function(footer)
-	logger.dbg("[justiify-status-bar] Custom filler function called")
+	if footer.settings.align ~= "justify" then
+		logger.dbg("[justiify-status-bar] Justify not set. Calling original dynamic filler function.")
+		return _ReadeFooter_dynamicFiller_orig(footer)
+	end
+	logger.dbg("[justiify-status-bar] Disabling dynamic filler as alingment is set to justify.")
 	if not footer.settings.disable_progress_bar then
 		if footer.settings.progress_bar_position == "alongside" then
 			return
@@ -49,31 +56,25 @@ local calculate_spaces = function(footer, texts, lengths)
 	local filler_space = " "
 	local filler_space_width = getTextLength(footer, filler_space)
 	local num_fillers = #lengths - 1
+	local tot_text_space = 1
+	for i = 1, #lengths do
+		tot_text_space = tot_text_space + lengths[i]
+	end
+	local empty_space = tot_width - tot_text_space
 	-- this table contains the start location from where each item will be placed
 	-- based on how far the next items is, that many spaces will be added to it.
-	local item_spacing = math.floor(tot_width / num_fillers)
-	local large_item_spaces = tot_width % num_fillers
-	-- calculate midpoints for the items
-	-- and hence the start locations for them
-	-- this loop runs only if there are more than 2 items
-	local width_covered = lengths[1]
-	for i = 2, #lengths do
-		-- get the location where the midpoint of the current entry should be placed
-		local midpoint = item_spacing * (i - 1)
+	local item_spacing = math.floor(empty_space / num_fillers)
+	local large_item_spaces = empty_space % num_fillers
+	-- append spaces to every element to create a gap
+	for i = 1, #lengths - 1 do
+		-- get the location spacing to the next entry
+		local space_to_fill = item_spacing
 		if i <= large_item_spaces then
-			midpoint = midpoint + 1
+			space_to_fill = space_to_fill + 1
 		end
-		-- calculate the location of the item
-		local item_pos = midpoint - math.floor(lengths[i] / 2)
-		-- if this is the last item then it should be left aligned
-		if i == #lengths then
-			item_pos = tot_width - lengths[i]
-		end
-		-- figure out spacing and append the spaces to previous text entry
-		local space_to_fill = item_pos - width_covered
 		local num_spaces = math.floor(space_to_fill / filler_space_width)
-		texts[i - 1] = BD.wrap(texts[i - 1] .. filler_space:rep(num_spaces))
-		width_covered = width_covered + lengths[i] + space_to_fill
+		-- append the spaces to the current text to create the spacing
+		texts[i] = BD.wrap(texts[i] .. filler_space:rep(num_spaces))
 	end
 	return texts
 end
@@ -82,14 +83,18 @@ ReaderFooter.init = function(self)
 	if ReaderFooter.textGeneratorMap then
 		if ReaderFooter.textGeneratorMap.dynamic_filler then
 			ReaderFooter.textGeneratorMap.dynamic_filler = new_filler_func
-			logger.dbg("[justiify-status-bar] textGeneratorMap dynamic filler exists and is replaced")
+			logger.dbg("[justiify-status-bar] textGeneratorMap dynamic filler exists and is replaced.")
 		end
 	end
 	_ReaderFooter_init_orig(self)
-	logger.info("[justiify-status-bar] 2-justify-status-bar.lua patch initialized successfully")
+	logger.info("[justiify-status-bar] 2-justify-status-bar.lua patch initialized successfully.")
 end
 
 function ReaderFooter.genAllFooterText(self, gen_to_skip)
+	-- if alignment is not set to Justify, then use original text generation
+	if self.settings.align ~= "justify" then
+		return _ReaderFooter_genAllFooterText_orig(self, gen_to_skip)
+	end
 	-- The lines below until the end of the for loop belong to the original
 	-- genAllFooterText function. We copy the whole function because we need
 	-- it to return only the table and not the line of text.
@@ -131,11 +136,79 @@ function ReaderFooter.genAllFooterText(self, gen_to_skip)
 	local out = table.concat(info)
 	logger.dbg(
 		string.format(
-			"[justiify-status-bar] calculated text as: %s; total text lenght is: %d",
+			"[justiify-status-bar] calculated text as: %s; total text lenght is: %d.",
 			out,
 			getTextLength(self, out)
 		)
 	)
 	-- The below line belongs to the original genAllFooterText function and we will be replacing it.
 	return out, false
+end
+
+-- Maybe it is just enough to rewrite the genAlignmentMenuItems to add justify option to it!!
+local _ReaderFooter_genAlingmentMenuItems_orig = ReaderFooter.genAlignmentMenuItems
+ReaderFooter.genAlignmentMenuItems = function(self, val)
+	-- when a nil value is passed in, the current settings value is picked
+	-- and its string value is returned. The original function will fail
+	-- if nil is passed and the alignment settign is "justify".
+	-- That is taken care of in the following if-condition
+	if val == nil and self.settings.align == "justify" then
+		return _("Justify")
+	end
+	if val ~= "justify" then
+		return _ReaderFooter_genAlingmentMenuItems_orig(self, val)
+	end
+	-- return the entry for Justify option in the menu
+	return {
+		text = _("Justify"),
+		checked_func = function()
+			return self.settings.align == val
+		end,
+		callback = function()
+			self.settings.align = val
+			self:refreshFooter(true)
+		end,
+	}
+end
+
+-- Extract an entry from the menu
+-- The menu entries are just table objects with no identifiers
+-- and we have to do a graph search by comparing the text entry
+-- This will return the first entry that starts with the text
+-- `item_text`. The matching performed is case sensitive.
+local function getEntryInMenu(menu_entry, item_text)
+	if menu_entry.sub_item_table == nil then
+		return nil
+	end
+	for _, entry in pairs(menu_entry.sub_item_table) do
+		local text = entry.text
+		if text == nil then
+			text = entry.text_func()
+		end
+		-- found the text, return entry
+		if string.find(text, item_text) == 1 then
+			return entry
+		end
+		-- search through all the sub entries of this entry
+		local found = getEntryInMenu(entry, item_text)
+		if found ~= nil then
+			return found
+		end
+	end
+	return nil
+end
+
+-- Below function adds the justify option to the main menu
+local _ReaderFooter_addToMainMenu = ReaderFooter.addToMainMenu
+ReaderFooter.addToMainMenu = function(self, menu_items)
+	_ReaderFooter_addToMainMenu(self, menu_items)
+	-- find the alignment entry
+	local alignment_entry = getEntryInMenu(menu_items.status_bar, "Alignment:")
+	if alignment_entry == nil then
+		logger.info("[justiify-status-bar] Could not find alignment entry in Menu, not adding justify option to it.")
+		return
+	end
+	local dbg_text = alignment_entry.text_func()
+	logger.dbg(string.format("Found entry with text: %s", dbg_text))
+	table.insert(alignment_entry.sub_item_table, self.genAlignmentMenuItems(self, "justify"))
 end
