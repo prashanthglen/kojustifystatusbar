@@ -15,5 +15,16 @@ Things I still want to add on to the patch:
 1. Restart KOReader.
 1. Set `Alignment` to `Justify` in the menu.
 
+## Screenshots
+
+![Status Bar Justify with 3 items](./screenshots/statusbar_justify_3.png)
+*Status bar containing 3 items with Aligngment set to Justify*
+
+![Status Bar Justify with 4 items](./screenshots/statusbar_justify_4.png)
+*Status bar containing 4 items with Aligngment set to Justify*
+
+![Status Bar Center](./screenshots/statusbar_center.png)
+*Status bar containing 4 items with Aligngment set to Center*
+
 ## Disclaimer
 The patch is not very well tested.
