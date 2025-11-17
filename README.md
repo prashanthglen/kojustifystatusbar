@@ -13,7 +13,7 @@ Things I still want to add on to the patch:
 1. Download the ![patch](./2-justify-status_bar.lua).
 1. Move this patch over to the `koreader/patches` folder.
 1. Restart KOReader.
-1. Set `Alignment` to `Justify` in the menu.
+1. Set the menu item `Status bar` > `Configure items` > `Alignment` to `Justify`.
 
 ## Screenshots
 
