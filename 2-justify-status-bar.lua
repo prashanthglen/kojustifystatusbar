@@ -6,7 +6,7 @@
     - [x] rewrite the genAllFooterText so that we can generate the
         text first and then replace all the separators with custom spacing.
     - [x] add menu entries to toggle this feature.
-    |   Status bar > Configure items > Alignment > Justify
+        Status bar > Configure items > Alignment > Justify
     - [ ] allow for grouping of entries.
     
 --]]
