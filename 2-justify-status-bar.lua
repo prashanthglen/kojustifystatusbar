@@ -16,6 +16,8 @@ local TextWidget = require("ui/widget/textwidget")
 local ReaderFooter = require("apps/reader/modules/readerfooter")
 local logger = require("logger")
 local _ = require("gettext")
+local Device = require("device")
+local Screen = Device.screen
 
 local _ReaderFooter_init_orig = ReaderFooter.init
 local _ReaderFooter_genAllFooterText_orig = ReaderFooter.genAllFooterText
@@ -23,10 +25,10 @@ local _ReadeFooter_dynamicFiller_orig = ReaderFooter.textGeneratorMap.dynamic_fi
 
 local new_filler_func = function(footer)
 	if footer.settings.align ~= "justify" then
-		logger.dbg("[justiify-status-bar] Justify not set. Calling original dynamic filler function.")
+		logger.info("[justiify-status-bar] Justify not set. Calling original dynamic filler function.")
 		return _ReadeFooter_dynamicFiller_orig(footer)
 	end
-	logger.dbg("[justiify-status-bar] Disabling dynamic filler as alingment is set to justify.")
+	logger.info("[justiify-status-bar] Disabling dynamic filler as alingment is set to justify.")
 	if not footer.settings.disable_progress_bar then
 		if footer.settings.progress_bar_position == "alongside" then
 			return
@@ -48,7 +50,14 @@ local calculate_spaces = function(footer, texts, lengths)
 	if #texts == 1 then
 		return texts
 	end
-	local tot_width = footer.dimen.w
+	-- get the total width by subtracting the footer dimensions with the margins
+	local tot_width = footer.footer_container.dimen.w
+	local margin = footer.horizontal_margin
+	if not footer.settings.disable_progress_bar then
+		margin = Screen:scaleBySize(footer.settings.progress_margin_width)
+	end
+	tot_width = math.floor(tot_width - 2 * margin)
+	-- if we have set the margins to be the same as the page margins, use the progress bar width
 	if footer.settings.progress_margin and not footer.settings.disable_progress_bar then
 		tot_width = footer.progress_bar.width
 	end
@@ -76,6 +85,9 @@ local calculate_spaces = function(footer, texts, lengths)
 		-- append the spaces to the current text to create the spacing
 		texts[i] = BD.wrap(texts[i] .. filler_space:rep(num_spaces))
 	end
+	logger.info(
+		string.format("total width calculated was %d, footer size %d", tot_width, footer.footer_container.dimen.w)
+	)
 	return texts
 end
 
@@ -83,7 +95,7 @@ ReaderFooter.init = function(self)
 	if ReaderFooter.textGeneratorMap then
 		if ReaderFooter.textGeneratorMap.dynamic_filler then
 			ReaderFooter.textGeneratorMap.dynamic_filler = new_filler_func
-			logger.dbg("[justiify-status-bar] textGeneratorMap dynamic filler exists and is replaced.")
+			logger.info("[justiify-status-bar] textGeneratorMap dynamic filler exists and is replaced.")
 		end
 	end
 	_ReaderFooter_init_orig(self)
@@ -134,7 +146,7 @@ function ReaderFooter.genAllFooterText(self, gen_to_skip)
 	end
 	info = calculate_spaces(self, info, lengths)
 	local out = table.concat(info)
-	logger.dbg(
+	logger.info(
 		string.format(
 			"[justiify-status-bar] calculated text as: %s; total text lenght is: %d.",
 			out,
@@ -209,6 +221,6 @@ ReaderFooter.addToMainMenu = function(self, menu_items)
 		return
 	end
 	local dbg_text = alignment_entry.text_func()
-	logger.dbg(string.format("Found entry with text: %s", dbg_text))
+	logger.info(string.format("Found entry with text: %s", dbg_text))
 	table.insert(alignment_entry.sub_item_table, self.genAlignmentMenuItems(self, "justify"))
 end
