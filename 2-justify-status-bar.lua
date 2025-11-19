@@ -25,10 +25,10 @@ local _ReadeFooter_dynamicFiller_orig = ReaderFooter.textGeneratorMap.dynamic_fi
 
 local new_filler_func = function(footer)
 	if footer.settings.align ~= "justify" then
-		logger.info("[justiify-status-bar] Justify not set. Calling original dynamic filler function.")
+		-- logger.dbg("[justiify-status-bar] Justify not set. Calling original dynamic filler function.")
 		return _ReadeFooter_dynamicFiller_orig(footer)
 	end
-	logger.info("[justiify-status-bar] Disabling dynamic filler as alingment is set to justify.")
+	-- logger.dbg("[justiify-status-bar] Disabling dynamic filler as alingment is set to justify.")
 	if not footer.settings.disable_progress_bar then
 		if footer.settings.progress_bar_position == "alongside" then
 			return
@@ -85,9 +85,9 @@ local calculate_spaces = function(footer, texts, lengths)
 		-- append the spaces to the current text to create the spacing
 		texts[i] = BD.wrap(texts[i] .. filler_space:rep(num_spaces))
 	end
-	logger.info(
-		string.format("total width calculated was %d, footer size %d", tot_width, footer.footer_container.dimen.w)
-	)
+	-- logger.info(
+	-- 	string.format("total width calculated was %d, footer size %d", tot_width, footer.footer_container.dimen.w)
+	-- )
 	return texts
 end
 
@@ -95,7 +95,7 @@ ReaderFooter.init = function(self)
 	if ReaderFooter.textGeneratorMap then
 		if ReaderFooter.textGeneratorMap.dynamic_filler then
 			ReaderFooter.textGeneratorMap.dynamic_filler = new_filler_func
-			logger.info("[justiify-status-bar] textGeneratorMap dynamic filler exists and is replaced.")
+			-- logger.info("[justiify-status-bar] textGeneratorMap dynamic filler exists and is replaced.")
 		end
 	end
 	_ReaderFooter_init_orig(self)
@@ -144,16 +144,12 @@ function ReaderFooter.genAllFooterText(self, gen_to_skip)
 			end
 		end
 	end
+	-- the original genAllFooterText function perfoms a concatenation
+	-- of all entries in info, The calculate spaces function appends
+	-- dynamic spaces to the entries.
+	-- After that they are concatenated and returned.
 	info = calculate_spaces(self, info, lengths)
 	local out = table.concat(info)
-	logger.info(
-		string.format(
-			"[justiify-status-bar] calculated text as: %s; total text lenght is: %d.",
-			out,
-			getTextLength(self, out)
-		)
-	)
-	-- The below line belongs to the original genAllFooterText function and we will be replacing it.
 	return out, false
 end
 
@@ -217,10 +213,10 @@ ReaderFooter.addToMainMenu = function(self, menu_items)
 	-- find the alignment entry
 	local alignment_entry = getEntryInMenu(menu_items.status_bar, "Alignment:")
 	if alignment_entry == nil then
-		logger.info("[justiify-status-bar] Could not find alignment entry in Menu, not adding justify option to it.")
+		logger.dbg("[justiify-status-bar] Could not find alignment entry in Menu, not adding justify option to it.")
 		return
 	end
 	local dbg_text = alignment_entry.text_func()
-	logger.info(string.format("Found entry with text: %s", dbg_text))
+	logger.dbg(string.format("Found entry with text: %s", dbg_text))
 	table.insert(alignment_entry.sub_item_table, self.genAlignmentMenuItems(self, "justify"))
 end
