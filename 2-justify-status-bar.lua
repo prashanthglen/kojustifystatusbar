@@ -24,7 +24,7 @@ local _ReaderFooter_genAllFooterText_orig = ReaderFooter.genAllFooterText
 local _ReadeFooter_dynamicFiller_orig = ReaderFooter.textGeneratorMap.dynamic_filler
 
 local new_filler_func = function(footer)
-	if footer.settings.align ~= "justify" then
+	if not footer.settings.is_statusbar_justified then
 		-- logger.dbg("[justiify-status-bar] Justify not set. Calling original dynamic filler function.")
 		return _ReadeFooter_dynamicFiller_orig(footer)
 	end
@@ -99,12 +99,17 @@ ReaderFooter.init = function(self)
 		end
 	end
 	_ReaderFooter_init_orig(self)
+	-- add the justify entry in the settings
+	-- This needs to be a separate entry so that we don't mess up with koreader when this patch is disabled.
+	if self.settings.is_statusbar_justified == nil then
+		self.settings.is_statusbar_justified = false
+	end
 	logger.info("[justiify-status-bar] 2-justify-status-bar.lua patch initialized successfully.")
 end
 
 function ReaderFooter.genAllFooterText(self, gen_to_skip)
 	-- if alignment is not set to Justify, then use original text generation
-	if self.settings.align ~= "justify" then
+	if not self.settings.is_statusbar_justified then
 		return _ReaderFooter_genAllFooterText_orig(self, gen_to_skip)
 	end
 	-- The lines below until the end of the for loop belong to the original
@@ -155,25 +160,42 @@ end
 
 -- Maybe it is just enough to rewrite the genAlignmentMenuItems to add justify option to it!!
 local _ReaderFooter_genAlingmentMenuItems_orig = ReaderFooter.genAlignmentMenuItems
-ReaderFooter.genAlignmentMenuItems = function(self, val)
-	-- when a nil value is passed in, the current settings value is picked
-	-- and its string value is returned. The original function will fail
-	-- if nil is passed and the alignment settign is "justify".
-	-- That is taken care of in the following if-condition
-	if val == nil and self.settings.align == "justify" then
-		return _("Justify")
+ReaderFooter.genAlignmentMenuItems = function(self, value)
+	local strings = {
+		left = _("Left"),
+		center = _("Center"),
+		right = _("Right"),
+		justify = _("Justify"),
+	}
+	if value == nil then
+		if self.settings.is_statusbar_justified then
+			return "justify"
+		end
+		return strings[self.settings.align]:lower()
 	end
-	if val ~= "justify" then
-		return _ReaderFooter_genAlingmentMenuItems_orig(self, val)
+	if value == "justify" then
+		return {
+			text = strings[value],
+			checked_func = function()
+				return self.settings.is_statusbar_justified
+			end,
+			radio = true,
+			callback = function()
+				self.settings.align = "center"
+				self.settings.is_statusbar_justified = not self.settings.is_statusbar_justified
+				self:refreshFooter(true)
+			end,
+		}
 	end
-	-- return the entry for Justify option in the menu
 	return {
-		text = _("Justify"),
+		text = strings[value],
 		checked_func = function()
-			return self.settings.align == val
+			return self.settings.align == value and not self.settings.is_statusbar_justified
 		end,
+		radio = true,
 		callback = function()
-			self.settings.align = val
+			self.settings.is_statusbar_justified = false
+			self.settings.align = value
 			self:refreshFooter(true)
 		end,
 	}
