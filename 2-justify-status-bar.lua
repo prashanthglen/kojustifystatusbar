@@ -169,7 +169,7 @@ ReaderFooter.genAlignmentMenuItems = function(self, value)
 	}
 	if value == nil then
 		if self.settings.is_statusbar_justified then
-			return "justify"
+			return strings["justify"]:lower()
 		end
 		return strings[self.settings.align]:lower()
 	end
@@ -215,8 +215,9 @@ local function getEntryInMenu(menu_entry, item_text)
 		if text == nil then
 			text = entry.text_func()
 		end
-		-- found the text, return entry
-		if string.find(text, item_text) == 1 then
+		-- found the text (), return entry
+		-- perform case insensitive check as that is enough in our case
+		if string.find(text:lower(), item_text:lower()) == 1 then
 			return entry
 		end
 		-- search through all the sub entries of this entry
@@ -233,9 +234,15 @@ local _ReaderFooter_addToMainMenu = ReaderFooter.addToMainMenu
 ReaderFooter.addToMainMenu = function(self, menu_items)
 	_ReaderFooter_addToMainMenu(self, menu_items)
 	-- find the alignment entry
-	local alignment_entry = getEntryInMenu(menu_items.status_bar, "Alignment:")
+	local alignment_entry_text = _("Alignment")
+	local alignment_entry = getEntryInMenu(menu_items.status_bar, alignment_entry_text)
 	if alignment_entry == nil then
-		logger.dbg("[justiify-status-bar] Could not find alignment entry in Menu, not adding justify option to it.")
+		logger.dbg(
+			string.format(
+				"[justiify-status-bar] Could not find alignment entry %s in Menu, not adding justify option to it.",
+				alignment_entry_text
+			)
+		)
 		return
 	end
 	local dbg_text = alignment_entry.text_func()
