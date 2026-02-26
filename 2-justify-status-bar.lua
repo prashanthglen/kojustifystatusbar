@@ -25,10 +25,10 @@ local _ReadeFooter_dynamicFiller_orig = ReaderFooter.textGeneratorMap.dynamic_fi
 
 local new_filler_func = function(footer)
 	if not footer.settings.is_statusbar_justified then
-		-- logger.dbg("[justiify-status-bar] Justify not set. Calling original dynamic filler function.")
+		-- logger.dbg("[justify-status-bar] Justify not set. Calling original dynamic filler function.")
 		return _ReadeFooter_dynamicFiller_orig(footer)
 	end
-	-- logger.dbg("[justiify-status-bar] Disabling dynamic filler as alingment is set to justify.")
+	-- logger.dbg("[justify-status-bar] Disabling dynamic filler as alingment is set to justify.")
 	if not footer.settings.disable_progress_bar then
 		if footer.settings.progress_bar_position == "alongside" then
 			return
@@ -95,7 +95,7 @@ ReaderFooter.init = function(self)
 	if ReaderFooter.textGeneratorMap then
 		if ReaderFooter.textGeneratorMap.dynamic_filler then
 			ReaderFooter.textGeneratorMap.dynamic_filler = new_filler_func
-			-- logger.info("[justiify-status-bar] textGeneratorMap dynamic filler exists and is replaced.")
+			-- logger.info("[justify-status-bar] textGeneratorMap dynamic filler exists and is replaced.")
 		end
 	end
 	_ReaderFooter_init_orig(self)
@@ -104,7 +104,7 @@ ReaderFooter.init = function(self)
 	if self.settings.is_statusbar_justified == nil then
 		self.settings.is_statusbar_justified = false
 	end
-	logger.info("[justiify-status-bar] 2-justify-status-bar.lua patch initialized successfully.")
+	logger.info("[justify-status-bar] 2-justify-status-bar.lua patch initialized successfully.")
 end
 
 function ReaderFooter.genAllFooterText(self, gen_to_skip)
@@ -239,7 +239,7 @@ ReaderFooter.addToMainMenu = function(self, menu_items)
 	if alignment_entry == nil then
 		logger.dbg(
 			string.format(
-				"[justiify-status-bar] Could not find alignment entry %s in Menu, not adding justify option to it.",
+				"[justify-status-bar] Could not find alignment entry %s in Menu, not adding justify option to it.",
 				alignment_entry_text
 			)
 		)
